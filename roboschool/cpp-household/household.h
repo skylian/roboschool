@@ -187,6 +187,7 @@ struct World: smart_pointer::enable_shared_from_this<World> {
 
     std::list<smart_pointer::shared_ptr<Household::Thingy>> bullet_contact_list(
             const smart_pointer::shared_ptr<Thingy>& t);
+
     double performance_bullet_ms;
 
     smart_pointer::shared_ptr<Thingy> load_thingy(

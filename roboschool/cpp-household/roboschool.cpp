@@ -193,7 +193,9 @@ public:
         tref->klass->metaclass = mclass;
     }
 
-    std::vector<shared_ptr<ThingyImpl>> contact_list();
+    int bullet_handle() const { return tref->bullet_handle; }
+
+    std::list<shared_ptr<ThingyImpl>> contact_list();
 
 private:
     shared_ptr<Household::Thingy> tref;
@@ -202,8 +204,8 @@ private:
 
 };
 
-std::vector<shared_ptr<ThingyImpl>> ThingyImpl::contact_list() {
-    std::vector<shared_ptr<ThingyImpl>> r;
+std::list<shared_ptr<ThingyImpl>> ThingyImpl::contact_list() {
+    std::list<shared_ptr<ThingyImpl>> r;
     if (auto world = wref.lock()) {
         if (!tref->is_sleeping()) {
             sleep_list.clear();
@@ -251,9 +253,11 @@ inline void Thingy::assign_metaclass(uint8_t mclass) {
 
 Pose Thingy::pose() const { return impl_->pose(); }
 
-std::vector<Thingy> Thingy::contact_list() {
-    std::vector<shared_ptr<ThingyImpl>> tlist = impl_->contact_list();
-    std::vector<Thingy> ret;
+int Thingy::bullet_handle() const { return impl_->bullet_handle(); }
+
+std::list<Thingy> Thingy::contact_list() {
+    std::list<shared_ptr<ThingyImpl>> tlist = impl_->contact_list();
+    std::list<Thingy> ret;
     for (auto& t : tlist) {
         ret.emplace_back(t);
     }
@@ -384,10 +388,26 @@ public:
         }
     }
 
+    int bullet_handle() const { return rref->bullet_handle; }
+
+    std::list<shared_ptr<ThingyImpl>> contact_list();
+
 private:
     shared_ptr<Household::Robot> rref;
     weak_ptr<Household::World> wref;
 };
+
+std::list<shared_ptr<ThingyImpl>> ObjectImpl::contact_list() {
+    auto t = ThingyImpl(rref->root_part, wref);
+    std::list<shared_ptr<ThingyImpl>> ret = t.contact_list();
+    for (auto& p : rref->robot_parts) {
+        auto t = ThingyImpl(p, wref);
+        auto l = t.contact_list();
+        ret.insert(ret.end(), l.begin(), l.end());
+    }
+
+    return ret;
+}
 
 void ObjectImpl::destroy() {
     rref->bullet_handle = -1;
@@ -448,6 +468,19 @@ void Object::set_pose_and_speed(
 
 void Object::query_position() {
     impl_->query_position();
+}
+
+int Object::bullet_handle() const {
+    return impl_->bullet_handle();
+}
+
+std::list<Thingy> Object::contact_list() {
+    std::list<shared_ptr<ThingyImpl>> tlist = impl_->contact_list();
+    std::list<Thingy> ret;
+    for (auto& t : tlist) {
+        ret.emplace_back(t);
+    }
+    return ret;
 }
 
 /*********************************** Camera ***********************************/

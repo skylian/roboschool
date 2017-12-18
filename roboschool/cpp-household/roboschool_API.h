@@ -15,6 +15,7 @@
 #pragma once
 
 #include <math.h>
+#include <list>
 #include <tuple>
 #include <vector>
 
@@ -120,7 +121,9 @@ public:
 
     void assign_metaclass(uint8_t mclass);
 
-    std::vector<Thingy> contact_list();
+    std::list<Thingy> contact_list();
+
+    int bullet_handle() const;
 
 private:
     smart_pointer::shared_ptr<ThingyImpl> impl_;
@@ -163,6 +166,10 @@ public:
     void set_pose_and_speed(const Pose& p, double vx, double vy, double vz);
 
     void query_position();
+
+    int bullet_handle() const;
+
+    std::list<Thingy> contact_list();
 
 private:
     smart_pointer::shared_ptr<ObjectImpl> impl_;
