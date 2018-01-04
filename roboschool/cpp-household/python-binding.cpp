@@ -314,7 +314,7 @@ struct World {
 
 	Robot load_urdf(const std::string& fn, const Pose& pose, bool fixed_base, bool self_collision)
 	{
-		Robot r(wref->load_urdf(fn, pose.convert_to_bt_transform(), fixed_base, self_collision), wref);
+		Robot r(wref->load_urdf(fn, pose.convert_to_bt_transform(), 1.0, fixed_base, self_collision), wref);
 		return r;
 	}
 
