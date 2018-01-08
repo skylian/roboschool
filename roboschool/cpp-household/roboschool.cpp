@@ -206,7 +206,8 @@ private:
 
 std::list<shared_ptr<ThingyImpl>> ThingyImpl::contact_list() {
     std::list<shared_ptr<ThingyImpl>> r;
-    if (auto world = wref.lock()) {
+    auto world = wref.lock();
+    if (world && tref->bullet_handle >= 0) {
         if (!tref->is_sleeping()) {
             sleep_list.clear();
             for (const auto &t: world->bullet_contact_list(tref)) {
