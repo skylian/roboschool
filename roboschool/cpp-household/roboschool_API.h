@@ -27,6 +27,7 @@ inline double square(double x)  { return x*x; }
 
 struct PoseImpl;
 struct ThingyImpl;
+struct JointImpl;
 struct ObjectImpl;
 struct CameraImpl;
 struct WorldImpl;
@@ -129,6 +130,21 @@ private:
     smart_pointer::shared_ptr<ThingyImpl> impl_;
 };
 
+/*********************************** Joint ***********************************/
+// struct Joint {
+//     Joint() : impl_(nullptr) {}
+
+//     Joint(const smart_pointer::shared_ptr<JointImpl>& impl) : impl_(impl) {}
+
+//     std::string name();
+
+//     void set_servo_target(double target_pos, double kp, double kd, double maxforce);
+
+// private:
+//     smart_pointer::shared_ptr<JointImpl> impl_;
+// };
+
+
 /*********************************** Object ***********************************/
 class Object {
     friend class World;
@@ -170,6 +186,10 @@ public:
     int bullet_handle() const;
 
     std::list<Thingy> contact_list();
+
+    void joint_control(const size_t joint_id, const double target_pos);
+
+    void current_relative_position(const size_t joint_id, float& pos, float& vel);
 
 private:
     smart_pointer::shared_ptr<ObjectImpl> impl_;
@@ -229,7 +249,8 @@ public:
                      const Pose& pose,
                      float scale,
                      bool fixed_base,
-                     bool self_collision);
+                     bool self_collision,
+                     bool use_multibody = false);
 
     std::vector<Object> load_mjcf(const std::string& fn);
 

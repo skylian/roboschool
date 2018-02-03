@@ -266,7 +266,7 @@ std::list<Thingy> Thingy::contact_list() {
 }
 
 /*********************************** Joint ***********************************/
-struct Joint {
+class Joint {
     shared_ptr<Household::Joint> jref;
 
     Joint(const shared_ptr<Household::Joint>& j) : jref(j) {}
@@ -322,6 +322,14 @@ struct Joint {
         }
     }
 };
+
+// std::string Joint::name() {
+//     return impl_->name();
+// }
+
+// void Joint::set_servo_target(double target_pos, double kp, double kd, double maxforce) {
+//     impl_->set_servo_target(target_pos, kp, kd, maxforce);
+// }
 
 /*********************************** Object ***********************************/
 class ObjectImpl {
@@ -392,6 +400,16 @@ public:
     int bullet_handle() const { return rref->bullet_handle; }
 
     std::list<shared_ptr<ThingyImpl>> contact_list();
+
+    void joint_control(const size_t joint_id, const double target_pos) {
+        assert(joint_id >= 0 && joint_id < rref->joints.size());
+        rref->joints[joint_id]->set_relative_servo_target(target_pos, 1, 1);
+    }
+
+    void current_relative_position(const size_t joint_id, float& pos, float& vel) {
+        assert(joint_id >= 0 && joint_id < rref->joints.size());
+        return rref->joints[joint_id]->joint_current_relative_position(&pos, &vel);
+    }
 
 private:
     shared_ptr<Household::Robot> rref;
@@ -482,6 +500,14 @@ std::list<Thingy> Object::contact_list() {
         ret.emplace_back(t);
     }
     return ret;
+}
+
+void Object::joint_control(const size_t joint_id, const double target_pos) {
+    impl_->joint_control(joint_id, target_pos);
+}
+
+void Object::current_relative_position(const size_t joint_id, float& pos, float& vel) {
+    impl_->current_relative_position(joint_id, pos, vel);
 }
 
 /*********************************** Camera ***********************************/
@@ -648,10 +674,11 @@ public:
                      const Pose& p,
                      float scale,
                      bool fixed_base,
-                     bool self_collision) {
+                     bool self_collision,
+                     bool use_multibody) {
         return Object(make_shared<ObjectImpl>(
                 wref->load_urdf(fn, PoseImpl::to_bt_transform(p), scale,
-                                fixed_base, self_collision),
+                                fixed_base, self_collision, use_multibody),
                 wref));
     }
 
@@ -741,8 +768,10 @@ Object World::load_urdf(const std::string& fn,
                         const Pose& pose,
                         float scale,
                         bool fixed_base,
-                        bool self_collision) {
-    return impl_->load_urdf(fn, pose, scale, fixed_base, self_collision);
+                        bool self_collision,
+                        bool use_multibody) {
+    return impl_->load_urdf(
+            fn, pose, scale, fixed_base, self_collision, use_multibody);
 }
 
 std::vector<Object> World::load_mjcf(const std::string& fn) {

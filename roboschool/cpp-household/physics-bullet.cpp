@@ -74,7 +74,9 @@ shared_ptr<Robot> World::load_urdf(const std::string& fn,
                                    const btTransform& tr,
                                    float scale,
                                    bool fixed_base,
-                                   bool self_collision) {
+                                   bool self_collision,
+                                   bool use_multibody) {
+    fprintf(stderr, "load_urdf begin\n");
     shared_ptr<Robot> robot(new Robot);
     robot->original_urdf_name = fn;
     int statusType;
@@ -89,7 +91,7 @@ shared_ptr<Robot> World::load_urdf(const std::string& fn,
                                          tr.getRotation()[3]);
     b3LoadUrdfCommandSetUseFixedBase(command, fixed_base);
     b3LoadUrdfCommandSetGlobalScaling(command, scale);
-    //b3LoadUrdfCommandSetUseMultiBody(command, false);
+    b3LoadUrdfCommandSetUseMultiBody(command, use_multibody);
     if (self_collision) {
         b3LoadUrdfCommandSetFlags(
                 command,
@@ -108,11 +110,13 @@ shared_ptr<Robot> World::load_urdf(const std::string& fn,
     robotlist.push_back(robot);
     bullet_handle_to_robot[robot->bullet_handle] = robot;
     robot->root_part->bullet_handle = robot->bullet_handle;
+    fprintf(stderr, "load_urdf end\n");
     return robot;
 }
 
 std::list<shared_ptr<Robot>> World::load_sdf_mjcf(const std::string& fn,
                                                   bool mjcf) {
+    fprintf(stderr, "load_sdf_mjfc begin\n");
     std::list<shared_ptr<Robot>> ret;
     const int max_sdf_bodies = 512;
     int bodyIndicesOut[max_sdf_bodies];
@@ -144,6 +148,7 @@ std::list<shared_ptr<Robot>> World::load_sdf_mjcf(const std::string& fn,
     if (N > max_sdf_bodies) {
         fprintf(stderr, "'%s': too many bodies (%i).\n", fn.c_str(), N);
     }
+    fprintf(stderr, "number of robots: %d\n", N);
     for (int c=0; c<N; c++) {
         shared_ptr<Robot> robot(new Robot);
         robot->bullet_handle = bodyIndicesOut[c];
@@ -153,6 +158,7 @@ std::list<shared_ptr<Robot>> World::load_sdf_mjcf(const std::string& fn,
         bullet_handle_to_robot[robot->bullet_handle] = robot;
         ret.push_back(robot);
     }
+    fprintf(stderr, "load_sdf_mjfc end\n");
     return ret;
 }
 
@@ -248,6 +254,7 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
     int cnt = b3GetNumJoints(client, robot->bullet_handle);
     robot->joints.resize(cnt);
     robot->robot_parts.resize(cnt);
+    fprintf(stderr, "root part name: %s, number of joints: %d\n", robot->root_part->name.c_str(), cnt);
     for (int c=0; c<cnt; c++) {
         struct b3JointInfo info;
         b3GetJointInfo(client, robot->bullet_handle, c, &info);
@@ -273,6 +280,9 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
             j->joint_limit2 = info.m_jointUpperLimit;
             j->joint_max_force = info.m_jointMaxForce;
             j->joint_max_velocity = info.m_jointMaxVelocity;
+            fprintf(stderr, "joint %d: %s, (%f, %f), %f, %f\n",
+                    c, j->joint_name.c_str(), j->joint_limit1, j->joint_limit2,
+                    j->joint_max_force, j->joint_max_velocity);
         }
 
         shared_ptr<Thingy> part = robot->robot_parts[c];
@@ -281,6 +291,7 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
         part->bullet_link_n = c;
         part->name = info.m_linkName;
         robot->robot_parts[c] = part;
+        fprintf(stderr, "part %d: %s %d %d\n", c, part->name.c_str(), part->bullet_handle, part->bullet_link_n);
     }
 }
 
@@ -607,6 +618,7 @@ void Joint::joint_current_relative_position(float* pos, float* speed) {
     float rpos, rspeed;
     rpos = joint_current_position;
     rspeed = joint_current_speed;
+    joint_has_limits = true;
     if (joint_has_limits) {
         float pos_mid = 0.5 * (joint_limit1 + joint_limit2);
         rpos = 2 * (rpos - pos_mid) / (joint_limit2 - joint_limit1);

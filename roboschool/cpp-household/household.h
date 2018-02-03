@@ -201,7 +201,8 @@ struct World: smart_pointer::enable_shared_from_this<World> {
                                                const btTransform& tr,
                                                float scale,
                                                bool fixed_base,
-                                               bool self_collision);
+                                               bool self_collision,
+                                               bool use_multibody = true);
     std::list<smart_pointer::shared_ptr<Robot>> load_sdf_mjcf(
             const std::string& fn, bool mjcf);
     void load_robot_shapes(const smart_pointer::shared_ptr<Robot>& robot,
