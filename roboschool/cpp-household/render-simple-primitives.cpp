@@ -7,31 +7,31 @@ namespace SimpleRender {
 
 using namespace Household;
 
-void primitives_to_mesh(const shared_ptr<ShapeDetailLevels>& m, int want_detail, int s)
-{
-	std::vector<shared_ptr<SimpleRender::Shape>>& shapes = m->detail_levels[want_detail];
-	const std::vector<shared_ptr<SimpleRender::Shape>>& best_detail = m->detail_levels[DETAIL_BEST];
+void primitives_to_mesh(
+        const shared_ptr<ShapeDetailLevels>& m, int want_detail, int s) {
+	auto& shapes = m->detail_levels[want_detail];
+	auto const& best_detail = m->detail_levels[DETAIL_BEST];
 
 	int shapes_count = best_detail.size();
 	shapes.resize(shapes_count);
 
 	{
 		shared_ptr<SimpleRender::Shape> lower_detail;
-		if (want_detail==DETAIL_BEST) {
+		if (want_detail == DETAIL_BEST) {
 			lower_detail = best_detail[s];
 		} else {
 			lower_detail.reset(new SimpleRender::Shape);
 			*lower_detail = *(best_detail[s]); // copy by value
 		}
 
-		if (lower_detail->primitive_type==SimpleRender::Shape::MESH) {
+		if (lower_detail->primitive_type == SimpleRender::Shape::MESH) {
 			// TODO: simplify
 			// now leave copied best_detail
 
-		} else if (lower_detail->primitive_type==SimpleRender::Shape::STATIC_MESH) {
+		} else if (lower_detail->primitive_type == SimpleRender::Shape::STATIC_MESH) {
 			// visualizing collision shape, leave it as it is
 
-		} else if (lower_detail->primitive_type==SimpleRender::Shape::BOX) {
+		} else if (lower_detail->primitive_type == SimpleRender::Shape::BOX) {
 			assert(lower_detail->v.empty());
 			double n[] = {
 			+1, 0, 0,
@@ -65,11 +65,14 @@ void primitives_to_mesh(const shared_ptr<ShapeDetailLevels>& m, int want_detail,
 						v[zero1] = side[6 - 2*idx];
 						v[zero2] = side[7 - 2*idx];
 					}
-					lower_detail->push_vertex(v[0]*0.5*lower_detail->box->size_x, v[1]*0.5*lower_detail->box->size_y, v[2]*0.5*lower_detail->box->size_z);
+					lower_detail->push_vertex(
+                            v[0] * 0.5 * lower_detail->box->size_x,
+                            v[1] * 0.5 * lower_detail->box->size_y,
+                            v[2] * 0.5 * lower_detail->box->size_z);
 				}
 			}
 
-		} else if (lower_detail->primitive_type==SimpleRender::Shape::CYLINDER) {
+		} else if (lower_detail->primitive_type == SimpleRender::Shape::CYLINDER) {
 			assert(lower_detail->v.empty());
 			int side_faces;
 			switch (want_detail) {
@@ -119,7 +122,8 @@ void primitives_to_mesh(const shared_ptr<ShapeDetailLevels>& m, int want_detail,
 				lower_detail->push_normal(n1[0], n1[1], n1[2]);
 			}
 
-		} else if (lower_detail->primitive_type==SimpleRender::Shape::SPHERE || lower_detail->primitive_type==SimpleRender::Shape::CAPSULE) {
+		} else if (lower_detail->primitive_type == SimpleRender::Shape::SPHERE ||
+                   lower_detail->primitive_type == SimpleRender::Shape::CAPSULE) {
 			assert(lower_detail->v.empty());
 			std::vector<aiVector3D> v(12, aiVector3D());
 			// Icosahedron
@@ -127,45 +131,47 @@ void primitives_to_mesh(const shared_ptr<ShapeDetailLevels>& m, int want_detail,
 			v[0] = aiVector3D(0,0,-1);
 			double phi = M_PI/5;
 			for (int i=1; i<6; ++i) {
-				v[i] = aiVector3D(cos(theta)*cos(phi), cos(theta)*sin(phi), -sin(theta));
+				v[i] = aiVector3D(
+                        cos(theta)*cos(phi), cos(theta)*sin(phi), -sin(theta));
 				phi += 2*M_PI / 5;
 			}
 			phi = 0.0;
 			for (int i=6; i<11; ++i) {
-				v[i] = aiVector3D(cos(theta)*cos(phi), cos(theta)*sin(phi), sin(theta));
+				v[i] = aiVector3D(
+                        cos(theta)*cos(phi), cos(theta)*sin(phi), sin(theta));
 				phi += 2*M_PI / 5;
 			}
 			v[11] = aiVector3D(0,0,+1);
 			int idx[] = {
-			0,2,1,
-			0,3,2,
-			0,4,3,
-			0,5,4,
-			0,1,5,
-			1,2,7,
-			2,3,8,
-			3,4,9,
-			4,5,10,
-			5,1,6,
-			1,7,6,
-			2,8,7,
-			3,9,8,
-			4,10,9,
-			5,6,10,
-			6,7,11,
-			7,8,11,
-			8,9,11,
-			9,10,11,
-			10,6,11,
+                0,2,1,
+                0,3,2,
+                0,4,3,
+                0,5,4,
+                0,1,5,
+                1,2,7,
+                2,3,8,
+                3,4,9,
+                4,5,10,
+                5,1,6,
+                1,7,6,
+                2,8,7,
+                3,9,8,
+                4,10,9,
+                5,6,10,
+                6,7,11,
+                7,8,11,
+                8,9,11,
+                9,10,11,
+                10,6,11,
 			};
-			for (int i=0; i<20*3; i++)
+			for (int i = 0; i < 20 * 3; i++)
 				lower_detail->push_vertex(v[idx[i]].x, v[idx[i]].y, v[idx[i]].z);
 
 			int repeat;
 			switch (want_detail) {
-			case DETAIL_BEST:  repeat = 2; break;
-			case DETAIL_LOWER: repeat = 1; break;
-			default: repeat = 0;
+                case DETAIL_BEST:  repeat = 2; break;
+                case DETAIL_LOWER: repeat = 1; break;
+                default: repeat = 0;
 			}
 
 			for (int c=0; c<repeat; c++) { // improve detail
@@ -196,8 +202,10 @@ void primitives_to_mesh(const shared_ptr<ShapeDetailLevels>& m, int want_detail,
 				}
 			}
 
-			bool capsule = lower_detail->primitive_type==SimpleRender::Shape::CAPSULE;
-			float rad = capsule ? lower_detail->cylinder->radius : lower_detail->sphere->radius;
+			bool capsule =
+                    lower_detail->primitive_type == SimpleRender::Shape::CAPSULE;
+			float rad = capsule ? lower_detail->cylinder->radius :
+                                  lower_detail->sphere->radius;
 			float len = capsule ? lower_detail->cylinder->length/2 : 0;
 			for (int i=0; i<(int)lower_detail->v.size()/3; i++) {
 				lower_detail->norm.push_back(lower_detail->v[3*i+0]);

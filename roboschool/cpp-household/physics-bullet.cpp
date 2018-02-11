@@ -1,7 +1,4 @@
-#include "render-glwidget.h"
-#include <QtWidgets/QApplication>
-#include <QtCore/QDir>
-#include <QtCore/QElapsedTimer>
+#include "render-simple.h"
 
 using smart_pointer::shared_ptr;
 using smart_pointer::weak_ptr;
@@ -412,8 +409,8 @@ void Thingy::remove_from_bullet() {
 }
 
 void World::bullet_step(int skip_frames) {
-    QElapsedTimer elapsed;
-    elapsed.start();
+    //QElapsedTimer elapsed;
+    //elapsed.start();
 
     float need_timestep = settings_timestep*skip_frames;
     if (settings_timestep_sent != need_timestep ||
@@ -447,27 +444,27 @@ void World::bullet_step(int skip_frames) {
         if (cmd) b3SubmitClientCommandAndWaitStatus(client, cmd);
     }
 
-    double ms_post_joints = elapsed.nsecsElapsed() / 1000000.0;
-    elapsed.start();
+    //double ms_post_joints = elapsed.nsecsElapsed() / 1000000.0;
+    //elapsed.start();
 
     b3SharedMemoryCommandHandle cmd = b3InitStepSimulationCommand(client);
     b3SubmitClientCommandAndWaitStatus(client, cmd);
 
     ts += settings_timestep*skip_frames;
 
-    double ms_step = elapsed.nsecsElapsed() / 1000000.0;
-    elapsed.start();
+    //double ms_step = elapsed.nsecsElapsed() / 1000000.0;
+    //elapsed.start();
     query_positions();
-    double ms_query = elapsed.nsecsElapsed() / 1000000.0;
+    //double ms_query = elapsed.nsecsElapsed() / 1000000.0;
 
-    static double mean;
-    mean *= 0.95;
-    mean += 0.05*ms_step;
+    //static double mean;
+    //mean *= 0.95;
+    //mean += 0.05*ms_step;
     //fprintf(stderr,
     //        "j=%0.2lf, step=%0.2lf (mean=%0.2f), query=%0.2lf\n",
     //        ms_post_joints, ms_step, mean, ms_query);
 
-    performance_bullet_ms = ms_post_joints + ms_step + ms_query;
+    //performance_bullet_ms = ms_post_joints + ms_step + ms_query;
 }
 
 void World::query_positions() {

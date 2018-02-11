@@ -1,7 +1,5 @@
 #define GL_GLEXT_PROTOTYPES
 #include "render-simple.h"
-#include <QtOpenGL/QtOpenGL>
-#include <QtOpenGL/QGLFramebufferObject>
 
 #include "glsl/nv_math.h"
 #include "glsl/nv_math_types.h"
@@ -21,25 +19,17 @@ using namespace nv_math;
 
 void ContextViewport::_depthlinear_init()
 {
-	if (samples > 1) {
-//		tex_color.reset(new Texture());
-//		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, tex_color->handle);
-//		glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGBA8, W, H, GL_FALSE);
-//		glBindTexture (GL_TEXTURE_2D_MULTISAMPLE, 0);
-//		tex_depthstencil.reset(new Texture());
-//		glBindTexture (GL_TEXTURE_2D_MULTISAMPLE, tex_depthstencil->handle);
-//		glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_DEPTH24_STENCIL8, W, H, GL_FALSE);
-//		glBindTexture (GL_TEXTURE_2D_MULTISAMPLE, 0);
-	} else {
-		tex_color.reset(new Texture());
-		glBindTexture(GL_TEXTURE_2D, tex_color->handle);
-		glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, W, H);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		tex_depthstencil.reset(new Texture());
-		glBindTexture(GL_TEXTURE_2D, tex_depthstencil->handle);
-		glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH24_STENCIL8, W, H);
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
+    // samples == 1
+    {
+        tex_color.reset(new Texture());
+        glBindTexture(GL_TEXTURE_2D, tex_color->handle);
+        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, W, H);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        tex_depthstencil.reset(new Texture());
+        glBindTexture(GL_TEXTURE_2D, tex_depthstencil->handle);
+        glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH24_STENCIL8, W, H);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 
 	tex_depthlinear.reset(new Texture());
 	glBindTexture(GL_TEXTURE_2D, tex_depthlinear->handle);
@@ -53,33 +43,40 @@ void ContextViewport::_depthlinear_init()
 	glBindFramebuffer(GL_FRAMEBUFFER, fbuf_depthlinear->handle);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex_depthlinear->handle, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    CHECK_GL_ERROR;
 }
 
 void ContextViewport::_depthlinear_paint(int sample_idx)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbuf_depthlinear->handle); // to framebuf
-	if (samples > 1) {
-//		glUseProgram(cx->program_depth_linearize_msaa->programId());
-//		glUniform4f(0, near*far, near-far, far, ortho ? 0.0f : 1.0f);
-//		glUniform1i(1, sample_idx);
-//		glBindMultiTextureEXT(GL_TEXTURE0, GL_TEXTURE_2D_MULTISAMPLE, tex_depthstencil->handle);
-//		glDrawArrays(GL_TRIANGLES, 0, 3);
-//		glBindMultiTextureEXT(GL_TEXTURE0, GL_TEXTURE_2D_MULTISAMPLE, 0);
-//		assert(0);
-	} else {
-		glUseProgram(cx->program_depth_linearize->programId());
-		glUniform4f(cx->location_clipInfo, near*far, near-far, far, ortho ? 0.0f : 1.0f);
+    // samples == 1
+    {
+        cx->program_depth_linearize->use();
+		glUniform4f(
+                cx->loc_clipInfo,
+                near * far,
+                near - far,
+                far,
+                ortho ? 0.0f : 1.0f);
 		//location_inputTexture
 		// MAC
 		glBindVertexArray(cx->ruler_vao->handle);
-		glBindMultiTextureEXT(GL_TEXTURE0, GL_TEXTURE_2D, tex_depthstencil->handle); // and to depthstencil
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, tex_depthstencil->handle);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindTexture(GL_TEXTURE_2D, 0);
+		//glBindMultiTextureEXT(
+        //        GL_TEXTURE0,
+        //        GL_TEXTURE_2D,
+        //        tex_depthstencil->handle); // and to depthstencil
+		//glDrawArrays(GL_TRIANGLES, 0, 3);
 		// MAC
-		glBindMultiTextureEXT(GL_TEXTURE0, GL_TEXTURE_2D, 0);
+		//glBindMultiTextureEXT(GL_TEXTURE0, GL_TEXTURE_2D, 0);
 	}
-	glUseProgram(0);
+    cx->program_depth_linearize->release();
 	glBindVertexArray(0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    CHECK_GL_ERROR;
 }
 
 struct UsefulStuff {
@@ -89,36 +86,43 @@ struct UsefulStuff {
 
 bool Context::_hbao_init()
 {
-	program_depth_linearize = load_program("fullscreen_triangle.vert.glsl", "", "ssao_depthlinearize.frag.glsl", 0, 0, "#version 410\n");
-	if (!program_depth_linearize->log().isEmpty()) {
-		fprintf(stderr, "Roboschool built-in render compiled with shadows, but SSAO shaders didn't load (1)\n");
-		return false;
-	}
-	program_depth_linearize->link(); // always returns true :(
-	location_clipInfo = program_depth_linearize->uniformLocation("clipInfo");
+	program_depth_linearize = GLShaderProgram::load_program(
+            "fullscreen_triangle.vert.glsl",
+            "",
+            "ssao_depthlinearize.frag.glsl",
+            0,
+            0,
+            "#version 410\n");
+    program_depth_linearize->link(); // always returns true :(
+	loc_clipInfo = program_depth_linearize->get_uniform_location("clipInfo");
 
-	program_hbao_calc = load_program("fullscreen_triangle.vert.glsl", "", "ssao_hbao.frag.glsl", 0, 0, "#version 410\n#define AO_DEINTERLEAVED 0\n#define AO_BLUR 0\n#define AO_LAYERED 0\n");
-	if (!program_hbao_calc->log().isEmpty()) {
-		fprintf(stderr, "Roboschool built-in render compiled with shadows, but SSAO shaders didn't load (2)\n");
-		return false;
-	}
+	program_hbao_calc = GLShaderProgram::load_program(
+            "fullscreen_triangle.vert.glsl",
+            "",
+            "ssao_hbao.frag.glsl",
+            0,
+            0,
+            "#version 410\n"
+            "#define AO_DEINTERLEAVED 0\n"
+            "#define AO_BLUR 0\n"
+            "#define AO_LAYERED 0\n");
 	program_hbao_calc->link();
-	location_RadiusToScreen = program_hbao_calc->uniformLocation("RadiusToScreen");
-	location_R2 = program_hbao_calc->uniformLocation("R2");
-	location_NegInvR2 = program_hbao_calc->uniformLocation("NegInvR2");
-	location_NDotVBias = program_hbao_calc->uniformLocation("NDotVBias");
-	location_InvFullResolution = program_hbao_calc->uniformLocation("InvFullResolution");
-	location_InvQuarterResolution = program_hbao_calc->uniformLocation("InvQuarterResolution");
-	location_AOMultiplier = program_hbao_calc->uniformLocation("AOMultiplier");
-	location_PowExponent = program_hbao_calc->uniformLocation("PowExponent");
-	location_projInfo = program_hbao_calc->uniformLocation("projInfo");
-	location_projScale = program_hbao_calc->uniformLocation("projScale");
-	location_projOrtho = program_hbao_calc->uniformLocation("projOrtho");
-	location_float2Offsets = program_hbao_calc->uniformLocation("float2Offsets");
-	location_jitters = program_hbao_calc->uniformLocation("jitters");
+	loc_RadiusToScreen = program_hbao_calc->get_uniform_location("RadiusToScreen");
+	loc_R2 = program_hbao_calc->get_uniform_location("R2");
+	loc_NegInvR2 = program_hbao_calc->get_uniform_location("NegInvR2");
+	loc_NDotVBias = program_hbao_calc->get_uniform_location("NDotVBias");
+	loc_InvFullResolution = program_hbao_calc->get_uniform_location("InvFullResolution");
+	loc_InvQuarterResolution = program_hbao_calc->get_uniform_location("InvQuarterResolution");
+	loc_AOMultiplier = program_hbao_calc->get_uniform_location("AOMultiplier");
+	loc_PowExponent = program_hbao_calc->get_uniform_location("PowExponent");
+	loc_projInfo = program_hbao_calc->get_uniform_location("projInfo");
+	loc_projScale = program_hbao_calc->get_uniform_location("projScale");
+	loc_projOrtho = program_hbao_calc->get_uniform_location("projOrtho");
+	loc_float2Offsets = program_hbao_calc->get_uniform_location("float2Offsets");
+	loc_jitters = program_hbao_calc->get_uniform_location("jitters");
 
-	location_texLinearDepth = program_hbao_calc->uniformLocation("texLinearDepth");
-	location_texRandom = program_hbao_calc->uniformLocation("texRandom");
+	loc_texLinearDepth = program_hbao_calc->get_uniform_location("texLinearDepth");
+	loc_texRandom = program_hbao_calc->get_uniform_location("texRandom");
 
 	useful.reset(new UsefulStuff);
 
@@ -143,15 +147,40 @@ bool Context::_hbao_init()
 
 	hbao_random.reset(new Texture());
 	glBindTexture(GL_TEXTURE_2D_ARRAY, hbao_random->handle);
-	glTexStorage3D (GL_TEXTURE_2D_ARRAY,1,GL_RGBA16_SNORM,HBAO_RANDOM_SIZE,HBAO_RANDOM_SIZE,MAX_SAMPLES);
-	glTexSubImage3D(GL_TEXTURE_2D_ARRAY,0,0,0,0, HBAO_RANDOM_SIZE,HBAO_RANDOM_SIZE,MAX_SAMPLES,GL_RGBA,GL_SHORT,hbaoRandomShort);
+	glTexStorage3D(
+            GL_TEXTURE_2D_ARRAY,
+            1,
+            GL_RGBA16_SNORM,
+            HBAO_RANDOM_SIZE,
+            HBAO_RANDOM_SIZE,
+            MAX_SAMPLES);
+	glTexSubImage3D(
+            GL_TEXTURE_2D_ARRAY,
+            0,
+            0,
+            0,
+            0,
+            HBAO_RANDOM_SIZE,
+            HBAO_RANDOM_SIZE,
+            MAX_SAMPLES,
+            GL_RGBA,
+            GL_SHORT,
+            hbaoRandomShort);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D_ARRAY,0);
 
 	for (int i=0; i<MAX_SAMPLES; i++) {
 		hbao_randomview[i].reset(new Texture());
-		glTextureView(hbao_randomview[i]->handle, GL_TEXTURE_2D, hbao_random->handle, GL_RGBA16_SNORM, 0, 1, i, 1);
+		glTextureView(
+                hbao_randomview[i]->handle,
+                GL_TEXTURE_2D,
+                hbao_random->handle,
+                GL_RGBA16_SNORM,
+                0,
+                1,
+                i,
+                1);
 		glBindTexture(GL_TEXTURE_2D, hbao_randomview[i]->handle);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -244,32 +273,61 @@ void ContextViewport::_ssao_run(int sampleIdx)
 			glSampleMaski(0, 1<<sampleIdx);
 		}
 	}
+    CHECK_GL_ERROR;
 
 	//glUseProgram( (USE_AO_SPECIALBLUR && blur) ?
 	//	cx->program_calc_blur->programId() :
 	//	cx->program_hbao_calc->programId() );
 
-	cx->program_hbao_calc->bind();
-	cx->program_hbao_calc->setUniformValue(cx->location_RadiusToScreen, cx->useful->hbaoUbo.RadiusToScreen);
-	cx->program_hbao_calc->setUniformValue(cx->location_R2, cx->useful->hbaoUbo.R2);
-	cx->program_hbao_calc->setUniformValue(cx->location_NegInvR2, cx->useful->hbaoUbo.NegInvR2);
-	cx->program_hbao_calc->setUniformValue(cx->location_NDotVBias, cx->useful->hbaoUbo.NDotVBias);
-	cx->program_hbao_calc->setUniformValue(cx->location_InvFullResolution, cx->useful->hbaoUbo.InvFullResolution[0], cx->useful->hbaoUbo.InvFullResolution[1]);
-	cx->program_hbao_calc->setUniformValue(cx->location_InvQuarterResolution, cx->useful->hbaoUbo.InvQuarterResolution[0], cx->useful->hbaoUbo.InvQuarterResolution[1]);
-	cx->program_hbao_calc->setUniformValue(cx->location_AOMultiplier, cx->useful->hbaoUbo.AOMultiplier);
-	cx->program_hbao_calc->setUniformValue(cx->location_PowExponent, cx->useful->hbaoUbo.PowExponent);
-	cx->program_hbao_calc->setUniformValue(cx->location_projInfo,
-		cx->useful->hbaoUbo.projInfo[0],
-		cx->useful->hbaoUbo.projInfo[1],
-		cx->useful->hbaoUbo.projInfo[2],
-		cx->useful->hbaoUbo.projInfo[3]);
-	cx->program_hbao_calc->setUniformValue(cx->location_projScale, cx->useful->hbaoUbo.projScale[0], cx->useful->hbaoUbo.projScale[1]);
-	cx->program_hbao_calc->setUniformValue(cx->location_projOrtho, cx->useful->hbaoUbo.projOrtho);
+	cx->program_hbao_calc->use();
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_RadiusToScreen, cx->useful->hbaoUbo.RadiusToScreen);
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_R2, cx->useful->hbaoUbo.R2);
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_NegInvR2, cx->useful->hbaoUbo.NegInvR2);
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_NDotVBias, cx->useful->hbaoUbo.NDotVBias);
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_InvFullResolution,
+            glm::vec2(cx->useful->hbaoUbo.InvFullResolution[0],
+                      cx->useful->hbaoUbo.InvFullResolution[1]));
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_InvQuarterResolution,
+            glm::vec2(cx->useful->hbaoUbo.InvQuarterResolution[0],
+                      cx->useful->hbaoUbo.InvQuarterResolution[1]));
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_AOMultiplier, cx->useful->hbaoUbo.AOMultiplier);
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_PowExponent, cx->useful->hbaoUbo.PowExponent);
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_projInfo,
+            glm::vec4(cx->useful->hbaoUbo.projInfo[0],
+                      cx->useful->hbaoUbo.projInfo[1],
+                      cx->useful->hbaoUbo.projInfo[2],
+                      cx->useful->hbaoUbo.projInfo[3]));
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_projScale,
+            glm::vec2(cx->useful->hbaoUbo.projScale[0],
+                      cx->useful->hbaoUbo.projScale[1]));
+	cx->program_hbao_calc->set_uniform_value(
+            cx->loc_projOrtho,
+            cx->useful->hbaoUbo.projOrtho);
 	// layered etc
-	glUniform4fv(cx->location_float2Offsets, sizeof(cx->useful->hbaoUbo.float2Offsets)/sizeof(cx->useful->hbaoUbo.float2Offsets[0])/4, cx->useful->hbaoUbo.float2Offsets);
-	glUniform4fv(cx->location_jitters, sizeof(cx->useful->hbaoUbo.jitters)/sizeof(cx->useful->hbaoUbo.jitters[0])/4, cx->useful->hbaoUbo.jitters);
-	glUniform1i(cx->location_texLinearDepth, 1); // texture unit 0
-	glUniform1i(cx->location_texRandom, 0); // texture unit 1
+    int count = sizeof(cx->useful->hbaoUbo.float2Offsets) /
+            sizeof(cx->useful->hbaoUbo.float2Offsets[0]) / 4;
+	glUniform4fv(
+            cx->loc_float2Offsets,
+            count,
+            cx->useful->hbaoUbo.float2Offsets);
+    count = sizeof(cx->useful->hbaoUbo.jitters) /
+            sizeof(cx->useful->hbaoUbo.jitters[0]) / 4;
+	glUniform4fv(
+            cx->loc_jitters,
+            count,
+            cx->useful->hbaoUbo.jitters);
+	glUniform1i(cx->loc_texLinearDepth, 1); // texture unit 0
+	glUniform1i(cx->loc_texRandom, 0); // texture unit 1
 
 	glBindVertexArray(cx->ruler_vao->handle);
 	glActiveTexture(GL_TEXTURE0);
@@ -294,6 +352,7 @@ void ContextViewport::_ssao_run(int sampleIdx)
 	glSampleMaski(0, ~0);
 
 	cx->program_hbao_calc->release();
+    CHECK_GL_ERROR;
 }
 
 } // namespace

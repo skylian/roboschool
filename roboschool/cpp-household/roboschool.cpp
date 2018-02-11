@@ -12,39 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <QtWidgets/QApplication>
-#include "render-glwidget.h"
+#include "render-simple.h"
 #include "roboschool_API.h"
 
 using smart_pointer::shared_ptr;
 using smart_pointer::weak_ptr;
 using smart_pointer::make_shared;
-
-extern std::string glsl_path;
-
-struct App {
-    static shared_ptr<App> instance(const shared_ptr<Household::World>& wref) {
-        static shared_ptr<App> instance(make_shared<App>(wref));
-        wref->app_ref = instance;
-
-        return instance;
-    }
-
-    virtual ~App() {
-        delete app_;
-    }
-
-    App(const shared_ptr<Household::World>& wref) {
-        SimpleRender::opengl_init_before_app(wref);
-        static int argc = 1;
-        static const char* argv[] = { "Roboschool Simulator" };
-        QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts, true);
-        app_ = new QApplication(argc, const_cast<char**>(argv));
-        SimpleRender::opengl_init(wref->cx);
-    }
-
-    QApplication* app_;
-};
 
 namespace roboschool {
 
@@ -515,11 +488,9 @@ class CameraImpl {
 public:
     CameraImpl(const shared_ptr<Household::Camera>& cref,
                const weak_ptr<Household::World>& wref) :
-            cref(cref), wref(wref), app(nullptr) {}
+            cref(cref), wref(wref) {}
 
-    ~CameraImpl() {
-        app.reset();
-    }
+    ~CameraImpl() {} 
 
     std::string name() {
         return cref->camera_name;
@@ -559,7 +530,6 @@ public:
 private:
     shared_ptr<Household::Camera> cref;
     weak_ptr<Household::World> wref;
-    shared_ptr<App> app;
 };
 
 RenderResult CameraImpl::render(bool render_depth,
@@ -567,9 +537,6 @@ RenderResult CameraImpl::render(bool render_depth,
                                 bool print_timing) {
     auto world = wref.lock();
     assert(world);
-    if (!app) {
-        app = App::instance(world);
-    }
 
     cref->camera_render(
             world->cx, render_depth, render_labeling, print_timing);
@@ -636,9 +603,10 @@ void Camera::move_and_look_at(
 /*********************************** World ************************************/
 class WorldImpl {
 public:
-    WorldImpl(double gravity, double timestep) {
+    WorldImpl(int img_height, int img_width, double gravity, double timestep) {
         wref.reset(new Household::World);
         wref->bullet_init(gravity, timestep);
+        SimpleRender::opengl_init(wref, img_height, img_width);
     }
 
     ~WorldImpl() {
@@ -743,8 +711,8 @@ void WorldImpl::set_glsl_path(const std::string& dir) {
     glsl_path = dir;
 }
 
-World::World(double gravity, double timestep) :
-        impl_(make_shared<WorldImpl>(gravity, timestep)) {}
+World::World(int height, int width, double gravity, double timestep) :
+        impl_(make_shared<WorldImpl>(height, width, gravity, timestep)) {}
 
 void World::remove_object(const Object& obj) {
     impl_->remove_object(obj);

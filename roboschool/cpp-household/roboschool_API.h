@@ -232,7 +232,7 @@ private:
 /*********************************** World ************************************/
 class World {
 public:
-    World(double gravity, double timestep);
+    World(int height, int width, double gravity, double timestep);
 
     void remove_object(const Object& obj);
 

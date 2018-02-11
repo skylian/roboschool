@@ -94,7 +94,7 @@ struct ShapeDetailLevels {
 	std::vector<smart_pointer::shared_ptr<Shape>> detail_levels[DETAIL_LEVELS];
 };
 
-void load_model(const smart_pointer::shared_ptr<ShapeDetailLevels>& result, const std::string& fn, btScalar scale, const btTransform& transform);
-bool load_collision_shape_from_OFF_files(const smart_pointer::shared_ptr<ShapeDetailLevels>& result, const std::string& fn_template, btScalar scale, const btTransform& viz_frame);
+void load_model(const std::shared_ptr<ShapeDetailLevels>& result, const std::string& fn, btScalar scale, const btTransform& transform);
+//bool load_collision_shape_from_OFF_files(const std::shared_ptr<ShapeDetailLevels>& result, const std::string& fn_template, btScalar scale, const btTransform& viz_frame);
 
 } // namespace Household
