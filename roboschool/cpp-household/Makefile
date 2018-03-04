@@ -11,7 +11,7 @@ ifeq ($(UNAME),Linux)
   RPATH=-Wl,-z,origin -Wl,--disable-new-dtags -Wl,-rpath,
 endif
 
-INC     += `$(PKG) --cflags glm`
+#INC     += `$(PKG) --cflags glm`
 LIBS    += -lstdc++ $(RPATH) `$(PKG) --libs egl`
 INC     += $(INCLUDE_FLAGS)
 LIBS    += $(LIB_FLAGS)
