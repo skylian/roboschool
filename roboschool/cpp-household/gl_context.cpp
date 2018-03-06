@@ -1,7 +1,9 @@
 #include <cassert>
 #include <iostream>
+#include <vector>
 
 #include "gl_context.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -75,9 +77,18 @@ EGLContext::EGLContext(int h, int w, int device): GLContext{h, w} {
         }
 
         eglQueryDevicesEXT(MAX_DEVICES, eglDevs, &numDevices);
-        cerr << "[EGL] Detected " << numDevices << " devices. "
-             << "Using device " << device << endl;
-        assert(device < numDevices);
+        std::vector<int> device_ids;
+        cuda_visible_devices(device_ids);
+        if (device_ids.size() == 0) {
+            for (int i = 0; i < numDevices; ++i) {
+                device_ids.push_back(i);
+            }
+        }
+        cerr << "[EGL] Detected " << numDevices << " devices, among which "
+             << (device_ids.size() ? getenv("CUDA_VISIBLE_DEVICES") : "all") << " are visible. ";
+        assert(device < (int)device_ids.size());
+        device = device_ids[device];
+        cerr << "Using device " << device << endl;
         eglDpy_ = eglGetPlatformDisplayEXT(
                 EGL_PLATFORM_DEVICE_EXT, eglDevs[device], 0);
     }
