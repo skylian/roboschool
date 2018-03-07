@@ -33,7 +33,6 @@ EVERY_BIN=../libroboschool.so ../libroboschool_d.so
 
 SIM = \
  utils.cpp \
- imgio.cpp \
  gl_context.cpp \
  assets-mesh.cpp \
  render-camera.cpp \

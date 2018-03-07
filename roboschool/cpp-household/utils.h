@@ -6,16 +6,12 @@
 #include <sys/stat.h>
 #include <vector>
 
-#include "mat.h"
-
 inline bool exists_file(const char* fn) {
     struct stat buffer;
     return (stat(fn, &buffer) == 0);
 }
 
 std::string read_file(const std::string& fn);
-
-Matuc read_img(const char* fname);
 
 void split(const std::string& s, char delim, std::vector<std::string>& v);
 

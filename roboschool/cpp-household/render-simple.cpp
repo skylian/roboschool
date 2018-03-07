@@ -1,6 +1,8 @@
 #define GL_GLEXT_PROTOTYPES
 #include <glm/gtc/type_ptr.hpp> 
-#include "CImg.h"
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include "render-simple.h"
 #include "utils.h"
 
@@ -71,18 +73,30 @@ int Context::cached_bind_texture(const std::string& image_fn) {
 		return f->second;
     }
     int b = 0;
-    try {
-        Matuc img = read_img(image_fn.c_str());
+    cv::Mat img = imread(image_fn, cv::IMREAD_COLOR);
+    if (img.empty()) {
+		fprintf(stderr, "cannot read image '%s", image_fn.c_str());
+    } else {
+        // (hack) we make the number of pixels in a row be 4*N, and set the 
+        // corresponding alignment of OpenGL to 4
+        if (img.cols % 4 != 0) {
+            cv::resize(img, img, cv::Size(img.cols - img.cols % 4, img.rows));
+        }
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        // make sure the img is stored continously in memory
+        assert(img.isContinuous());
+        // make sure the rows of img are tightly packed
+        assert(int(img.step[0] / img.elemSize()) == img.cols);
         glActiveTexture(GL_TEXTURE0);
         shared_ptr<Texture> t(new Texture());
         glBindTexture(GL_TEXTURE_2D, t->handle);
-        GLint tex_fmt = (img.channels() == 3) ? GL_RGB : GL_RGBA;
+        GLint tex_fmt = (img.channels() == 3) ? GL_BGR : GL_BGRA;
         glTexImage2D(
                 GL_TEXTURE_2D,
                 0,
-                tex_fmt,
-                img.width(),
-                img.height(),
+                GL_RGBA,
+                img.cols,
+                img.rows,
                 0,
                 tex_fmt,
                 GL_UNSIGNED_BYTE,
@@ -96,17 +110,14 @@ int Context::cached_bind_texture(const std::string& image_fn) {
                 GL_LINEAR_MIPMAP_LINEAR);
         glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, 0);
+        CHECK_GL_ERROR;
         textures.push_back(t);
         b = t->handle;
-    } catch (cimg_library::CImgIOException& e) {
-		fprintf(stderr, "cannot read image '%s': %s\n",
-                image_fn.c_str(), e.what());
-	}
-
-    CHECK_GL_ERROR;
-    if (b == 0) {
-        fprintf(stderr, "cannot bind texture '%s'\n", image_fn.c_str()); 
+        if (b == 0) {
+            fprintf(stderr, "cannot bind texture '%s'\n", image_fn.c_str()); 
+        }
     }
+
 	bind_cache[image_fn] = b; // we go on, even if texture isn't there -- better
                               // than crash
 	return b;
