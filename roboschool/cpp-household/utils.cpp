@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <stdlib.h>
 #include "utils.h"
 
