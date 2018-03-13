@@ -14,12 +14,11 @@
 
 #pragma once
 
-#include <math.h>
 #include <list>
+#include <memory>
+#include <math.h>
 #include <tuple>
 #include <vector>
-
-#include "common.h"
 
 namespace roboschool {
 
@@ -102,7 +101,7 @@ class Thingy {
 public:
     Thingy() : impl_(nullptr) {}
 
-    Thingy(const smart_pointer::shared_ptr<ThingyImpl>& impl) : impl_(impl) {}
+    Thingy(const std::shared_ptr<ThingyImpl>& impl) : impl_(impl) {}
 
     Pose pose() const;
 
@@ -127,21 +126,21 @@ public:
     int bullet_handle() const;
 
 private:
-    smart_pointer::shared_ptr<ThingyImpl> impl_;
+    std::shared_ptr<ThingyImpl> impl_;
 };
 
 /*********************************** Joint ***********************************/
 // struct Joint {
 //     Joint() : impl_(nullptr) {}
 
-//     Joint(const smart_pointer::shared_ptr<JointImpl>& impl) : impl_(impl) {}
+//     Joint(const std::shared_ptr<JointImpl>& impl) : impl_(impl) {}
 
 //     std::string name();
 
 //     void set_servo_target(double target_pos, double kp, double kd, double maxforce);
 
 // private:
-//     smart_pointer::shared_ptr<JointImpl> impl_;
+//     std::shared_ptr<JointImpl> impl_;
 // };
 
 
@@ -149,15 +148,15 @@ private:
 class Object {
     friend class World;
 public:
-    Object(const smart_pointer::shared_ptr<ObjectImpl>& impl) : impl_(impl) {}
+    Object(const std::shared_ptr<ObjectImpl>& impl) : impl_(impl) {}
 
     Object() : impl_(nullptr) {}
 
-    const smart_pointer::shared_ptr<ObjectImpl>& impl() const {
+    const std::shared_ptr<ObjectImpl>& impl() const {
         return impl_;
     }
 
-    smart_pointer::shared_ptr<ObjectImpl>& mutable_impl() {
+    std::shared_ptr<ObjectImpl>& mutable_impl() {
         return impl_;
     }
 
@@ -192,7 +191,7 @@ public:
     void current_relative_position(const size_t joint_id, float& pos, float& vel);
 
 private:
-    smart_pointer::shared_ptr<ObjectImpl> impl_;
+    std::shared_ptr<ObjectImpl> impl_;
 };
 
 /*********************************** Camera ***********************************/
@@ -202,7 +201,7 @@ typedef std::tuple<std::string, std::string,
 
 class Camera {
 public:
-    Camera(const smart_pointer::shared_ptr<CameraImpl>& impl) : impl_(impl) {}
+    Camera(const std::shared_ptr<CameraImpl>& impl) : impl_(impl) {}
 
     std::string name();
 
@@ -226,7 +225,7 @@ public:
                           double obj_x, double obj_y, double obj_z);
 
 private:
-    smart_pointer::shared_ptr<CameraImpl> impl_;
+    std::shared_ptr<CameraImpl> impl_;
 };
 
 /*********************************** World ************************************/
@@ -264,7 +263,7 @@ public:
     void set_glsl_path(const std::string& dir);
 
 private:
-    smart_pointer::shared_ptr<WorldImpl> impl_;
+    std::shared_ptr<WorldImpl> impl_;
 };
 
 } // roboschool

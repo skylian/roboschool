@@ -28,15 +28,15 @@ struct ThingyClass {
     bool frozen = false;
 
     // optional structures for simple render
-    smart_pointer::shared_ptr<ShapeDetailLevels> shapedet_visual;
-    smart_pointer::shared_ptr<ShapeDetailLevels> shapedet_collision;
+    std::shared_ptr<ShapeDetailLevels> shapedet_visual;
+    std::shared_ptr<ShapeDetailLevels> shapedet_collision;
 
     // it's there for static_mesh
-    smart_pointer::shared_ptr<ThingyClass> modified_from_class;
+    std::shared_ptr<ThingyClass> modified_from_class;
 };
 
 struct Thingy {
-    smart_pointer::shared_ptr<ThingyClass> klass;
+    std::shared_ptr<ThingyClass> klass;
 
     std::string name;
     int visibility_123 = 0;
@@ -69,12 +69,12 @@ struct Thingy {
     bool bullet_queried_at_least_once = false;
     // subobjects shouldn't be destroyed before parent (right order is parent
     // first), nonempty only in robots with joints
-    //std::list<smart_pointer::shared_ptr<Thingy>> subobjects_keepalive;
+    //std::list<std::shared_ptr<Thingy>> subobjects_keepalive;
 };
 
 struct Joint {
-    smart_pointer::weak_ptr<struct Robot> robot;
-    smart_pointer::weak_ptr<struct World> wref;
+    std::weak_ptr<struct Robot> robot;
+    std::weak_ptr<struct World> wref;
 
     std::string joint_name;
     int bullet_joint_n = -1;
@@ -112,7 +112,7 @@ struct Joint {
 struct Camera {
     std::string camera_name;
     std::string score;
-    smart_pointer::weak_ptr<Thingy> camera_attached_to;
+    std::weak_ptr<Thingy> camera_attached_to;
     btTransform camera_pose; // used if camera_attached_to==0
 
     int camera_res_w = 192;
@@ -129,9 +129,9 @@ struct Camera {
     std::string camera_labeling;
     std::string camera_labeling_mask;
 
-    smart_pointer::shared_ptr<SimpleRender::ContextViewport> viewport;
+    std::shared_ptr<SimpleRender::ContextViewport> viewport;
     void camera_render(
-            const smart_pointer::shared_ptr<SimpleRender::Context>& cx,
+            const std::shared_ptr<SimpleRender::Context>& cx,
             bool render_depth,
             bool render_labeling,
             bool print_timing);
@@ -140,19 +140,19 @@ struct Camera {
 };
 
 struct Robot {
-    smart_pointer::shared_ptr<Thingy> root_part;
+    std::shared_ptr<Thingy> root_part;
     int bullet_handle;
     std::string original_urdf_name;
-    std::vector<smart_pointer::shared_ptr<Thingy>> robot_parts;
-    std::vector<smart_pointer::shared_ptr<Joint>> joints;
-    std::vector<smart_pointer::shared_ptr<Camera>> cameras;
+    std::vector<std::shared_ptr<Thingy>> robot_parts;
+    std::vector<std::shared_ptr<Joint>> joints;
+    std::vector<std::shared_ptr<Camera>> cameras;
     //void replace_texture(
     //        const std::string& material_name, const std::string& new_jpeg_png);
 };
 
-struct World: smart_pointer::enable_shared_from_this<World> {
+struct World: std::enable_shared_from_this<World> {
     b3PhysicsClientHandle client;
-    smart_pointer::shared_ptr<App> app_ref; // Keep application alive, while
+    std::shared_ptr<App> app_ref; // Keep application alive, while
                                             // some worlds exist. If no worlds
                                             // exist then new world gets created,
                                             // probably will crash :(
@@ -164,65 +164,65 @@ struct World: smart_pointer::enable_shared_from_this<World> {
     float settings_skip_frames_sent = 0;
     void settings_apply();
 
-    //std::set<smart_pointer::weak_ptr<ThingyClass>> classes;
-    std::map<std::string, smart_pointer::weak_ptr<ThingyClass>> klass_cache;
-    smart_pointer::shared_ptr<ThingyClass> klass_cache_find_or_create(
+    //std::set<std::weak_ptr<ThingyClass>> classes;
+    std::map<std::string, std::weak_ptr<ThingyClass>> klass_cache;
+    std::shared_ptr<ThingyClass> klass_cache_find_or_create(
             const std::string& kname);
     void klass_cache_clear();
 
-    std::vector<smart_pointer::weak_ptr<Robot>> robotlist;
-    std::map<int, smart_pointer::weak_ptr<Robot>> bullet_handle_to_robot;
+    std::vector<std::weak_ptr<Robot>> robotlist;
+    std::map<int, std::weak_ptr<Robot>> bullet_handle_to_robot;
 
-    std::vector<smart_pointer::weak_ptr<Thingy>> drawlist;
-    void thingy_add_to_drawlist(const smart_pointer::shared_ptr<Thingy>& t);
+    std::vector<std::weak_ptr<Thingy>> drawlist;
+    void thingy_add_to_drawlist(const std::shared_ptr<Thingy>& t);
     double ts = 0;
 
-    smart_pointer::shared_ptr<SimpleRender::Context> cx;
+    std::shared_ptr<SimpleRender::Context> cx;
 
     void bullet_init(float gravity, float timestep);
     void bullet_step(int skip_frames);
     void clean_everything();
     void query_positions();
-    void query_body_position(const smart_pointer::shared_ptr<Robot>& robot);
+    void query_body_position(const std::shared_ptr<Robot>& robot);
 
-    std::list<smart_pointer::shared_ptr<Household::Thingy>> bullet_contact_list(
-            const smart_pointer::shared_ptr<Thingy>& t);
+    std::list<std::shared_ptr<Household::Thingy>> bullet_contact_list(
+            const std::shared_ptr<Thingy>& t);
 
     double performance_bullet_ms;
 
-    smart_pointer::shared_ptr<Thingy> load_thingy(
+    std::shared_ptr<Thingy> load_thingy(
             const std::string& the_filename,
             const btTransform& tr,
             float scale,
             float mass,
             uint32_t color,
             bool decoration_only);
-    smart_pointer::shared_ptr<Robot> load_urdf(const std::string& fn,
+    std::shared_ptr<Robot> load_urdf(const std::string& fn,
                                                const btTransform& tr,
                                                float scale,
                                                bool fixed_base,
                                                bool self_collision,
                                                bool use_multibody = true);
-    std::list<smart_pointer::shared_ptr<Robot>> load_sdf_mjcf(
+    std::list<std::shared_ptr<Robot>> load_sdf_mjcf(
             const std::string& fn, bool mjcf);
-    void load_robot_shapes(const smart_pointer::shared_ptr<Robot>& robot,
+    void load_robot_shapes(const std::shared_ptr<Robot>& robot,
                            float scale);
-    void load_robot_joints(const smart_pointer::shared_ptr<Robot>& robot,
+    void load_robot_joints(const std::shared_ptr<Robot>& robot,
                            const std::string& origin_fn);
 
-    void robot_move(const smart_pointer::shared_ptr<Robot>& robot,
+    void robot_move(const std::shared_ptr<Robot>& robot,
                     const btTransform& tr,
                     const btVector3& speed);
 
-    smart_pointer::shared_ptr<Thingy> debug_rect(
+    std::shared_ptr<Thingy> debug_rect(
             btScalar x1, btScalar y1, btScalar x2, btScalar y2,
             btScalar h,
             uint32_t color);
-    smart_pointer::shared_ptr<Thingy> debug_line(
+    std::shared_ptr<Thingy> debug_line(
             btScalar x1, btScalar y1, btScalar z1,
             btScalar x2, btScalar y2, btScalar z2,
             uint32_t color);
-    smart_pointer::shared_ptr<Thingy> debug_sphere(
+    std::shared_ptr<Thingy> debug_sphere(
             btScalar x, btScalar y, btScalar z,
             btScalar rad,
             uint32_t color);

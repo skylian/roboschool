@@ -15,8 +15,8 @@
 // sysctl -n machdep.cpu.brand_string
 // google for processor id
 
-using smart_pointer::shared_ptr;
-using smart_pointer::weak_ptr;
+using std::shared_ptr;
+using std::weak_ptr;
 
 std::string glsl_path = "roboschool/cpp-household/glsl"; // outside namespace
 

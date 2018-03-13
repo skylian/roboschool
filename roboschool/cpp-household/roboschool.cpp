@@ -15,9 +15,9 @@
 #include "render-simple.h"
 #include "roboschool_API.h"
 
-using smart_pointer::shared_ptr;
-using smart_pointer::weak_ptr;
-using smart_pointer::make_shared;
+using std::shared_ptr;
+using std::weak_ptr;
+using std::make_shared;
 
 namespace roboschool {
 

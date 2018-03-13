@@ -67,7 +67,7 @@ const int HBAO_RANDOM_SIZE = AO_RANDOMTEX_SIZE;
 const int HBAO_RANDOM_ELEMENTS = HBAO_RANDOM_SIZE*HBAO_RANDOM_SIZE;
 
 struct Context {
-	Context(const smart_pointer::shared_ptr<Household::World>& world);
+	Context(const std::shared_ptr<Household::World>& world);
 	~Context();
 
 	bool slowmo = false;
@@ -117,8 +117,8 @@ struct Context {
 	std::shared_ptr<GLShaderProgram> program_hbao_calc;
 	std::shared_ptr<GLShaderProgram> program_calc_blur;
 
-	std::list<smart_pointer::shared_ptr<VAO>>    allocated_vaos;
-	std::list<smart_pointer::shared_ptr<Buffer>> allocated_buffers;
+	std::list<std::shared_ptr<VAO>>    allocated_vaos;
+	std::list<std::shared_ptr<Buffer>> allocated_buffers;
 
 	float pure_color_opacity = 1.0;
 
@@ -132,23 +132,23 @@ struct Context {
 	int cached_bind_texture(const std::string& image_fn);
 	std::map<std::string, int> bind_cache;
 
-	smart_pointer::shared_ptr<struct UsefulStuff> useful = 0;
+	std::shared_ptr<struct UsefulStuff> useful = 0;
 	void initGL();
 
 	bool _hbao_init();
-	smart_pointer::shared_ptr<Texture> hbao_random;
-	smart_pointer::shared_ptr<Texture> hbao_randomview[MAX_SAMPLES];
+	std::shared_ptr<Texture> hbao_random;
+	std::shared_ptr<Texture> hbao_randomview[MAX_SAMPLES];
 
-	smart_pointer::shared_ptr<VAO> ruler_vao;
-	smart_pointer::shared_ptr<Buffer> ruler_vertexes;
+	std::shared_ptr<VAO> ruler_vao;
+	std::shared_ptr<Buffer> ruler_vertexes;
 
-	void _shape_to_vao(const smart_pointer::shared_ptr<Household::Shape>& shape);
+	void _shape_to_vao(const std::shared_ptr<Household::Shape>& shape);
 	void _generate_ruler_vao();
 };
 
 class ContextViewport {
 public:
-	smart_pointer::shared_ptr<Context> cx;
+	std::shared_ptr<Context> cx;
 	int visible_object_count;
 
 	int W, H;

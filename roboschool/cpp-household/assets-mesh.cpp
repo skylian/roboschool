@@ -4,7 +4,7 @@
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
 
-using smart_pointer::shared_ptr;
+using std::shared_ptr;
 
 namespace Household {
 

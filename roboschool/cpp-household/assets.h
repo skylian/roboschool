@@ -2,10 +2,9 @@
 #include <BulletDynamics/btBulletDynamicsCommon.h>
 #include <set>
 #include <map>
+#include <memory>
 #include <list>
 #include <vector>
-
-#include "common.h"
 
 namespace SimpleRender {
 struct VAO;
@@ -48,9 +47,9 @@ struct Shape {
 	enum { MESH, STATIC_MESH, CYLINDER, SPHERE, CAPSULE, BOX, DEBUG_LINES };
 	int primitive_type = MESH;
 
-	smart_pointer::shared_ptr<Cylinder> cylinder;
-	smart_pointer::shared_ptr<Sphere> sphere;
-	smart_pointer::shared_ptr<Box> box;
+	std::shared_ptr<Cylinder> cylinder;
+	std::shared_ptr<Sphere> sphere;
+	std::shared_ptr<Box> box;
 
 	bool converted_to_mesh = false;
 	void convert_primitive_to_mesh();
@@ -67,12 +66,12 @@ struct Shape {
 	void push_tex(btScalar u, btScalar v);
 	void push_lines(btScalar x, btScalar y, btScalar z);
 
-	smart_pointer::shared_ptr<Material> material;
-	smart_pointer::shared_ptr<SimpleRender::VAO> vao;
-	smart_pointer::shared_ptr<SimpleRender::Buffer> buf_v;
-	smart_pointer::shared_ptr<SimpleRender::Buffer> buf_n;
-	smart_pointer::shared_ptr<SimpleRender::Buffer> buf_t;
-	smart_pointer::shared_ptr<SimpleRender::Buffer> buf_l;
+	std::shared_ptr<Material> material;
+	std::shared_ptr<SimpleRender::VAO> vao;
+	std::shared_ptr<SimpleRender::Buffer> buf_v;
+	std::shared_ptr<SimpleRender::Buffer> buf_n;
+	std::shared_ptr<SimpleRender::Buffer> buf_t;
+	std::shared_ptr<SimpleRender::Buffer> buf_l;
 
 	Shape()  { origin.setIdentity(); }
 };
@@ -82,7 +81,7 @@ const int DETAIL_BEST   = 0;
 const int DETAIL_LOWER  = 1;
 
 struct MaterialNamespace {
-	std::map<std::string, smart_pointer::shared_ptr<Material>> name2mtl;
+	std::map<std::string, std::shared_ptr<Material>> name2mtl;
 };
 
 struct ShapeDetailLevels {
@@ -90,8 +89,8 @@ struct ShapeDetailLevels {
 	std::string load_later_fn;
 	btTransform load_later_transform;
 	float scale;
-	smart_pointer::shared_ptr<MaterialNamespace> materials;
-	std::vector<smart_pointer::shared_ptr<Shape>> detail_levels[DETAIL_LEVELS];
+	std::shared_ptr<MaterialNamespace> materials;
+	std::vector<std::shared_ptr<Shape>> detail_levels[DETAIL_LEVELS];
 };
 
 void load_model(const std::shared_ptr<ShapeDetailLevels>& result, const std::string& fn, btScalar scale, const btTransform& transform);
