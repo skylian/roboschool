@@ -9,6 +9,96 @@ namespace Household {
 static int chrome_trace_log = -1;
 #endif
 
+void Joint::set_motor_torque(float torque) {
+    shared_ptr<Robot> r = robot.lock();
+    shared_ptr<World> w = wref.lock();
+    if (!r || !w) return;
+    if (first_torque_call) {
+        set_servo_target(0, 0.1, 0.1, 0);
+        first_torque_call = false;
+    }
+    torque_need_repeat = true;
+    torque_repeat_val = torque;
+}
+
+void Joint::set_target_speed(float target_speed, float kd, float maxforce) {
+    shared_ptr<Robot> r = robot.lock();
+    shared_ptr<World> w = wref.lock();
+    if (!r || !w) return;
+    b3SharedMemoryCommandHandle cmd =
+            b3JointControlCommandInit2(w->client,
+                                       r->bullet_handle,
+                                       CONTROL_MODE_VELOCITY);
+    b3JointControlSetDesiredVelocity(cmd, bullet_uindex, target_speed);
+    b3JointControlSetKd(cmd, bullet_uindex, kd);
+    b3JointControlSetMaximumForce(cmd, bullet_uindex, maxforce);
+    b3SubmitClientCommandAndWaitStatus(w->client, cmd);
+    first_torque_call = true;
+    torque_need_repeat = false;
+}
+
+void Joint::set_servo_target(
+        float target_pos, float kp, float kd, float maxforce) {
+    shared_ptr<Robot> r = robot.lock();
+    shared_ptr<World> w = wref.lock();
+    if (!r || !w) return;
+    b3SharedMemoryCommandHandle cmd =
+            b3JointControlCommandInit2(w->client,
+                                       r->bullet_handle,
+                                       CONTROL_MODE_POSITION_VELOCITY_PD);
+    b3JointControlSetDesiredPosition(cmd, bullet_qindex, target_pos);
+    b3JointControlSetKp(cmd, bullet_uindex, kp);
+    b3JointControlSetKd(cmd, bullet_uindex, kd);
+    b3JointControlSetMaximumForce(cmd, bullet_uindex, maxforce);
+    b3SubmitClientCommandAndWaitStatus(w->client, cmd);
+    first_torque_call = true;
+    torque_need_repeat = false;
+}
+
+void Joint::set_relative_servo_target(float target_pos, float kp, float kd) {
+    float pos_mid = 0.5*(joint_limit1 + joint_limit2);
+    set_servo_target( pos_mid + 0.5*target_pos*(joint_limit2 - joint_limit1),
+        kp, kd,
+        joint_max_force ? joint_max_force : 40); // 40 is about as strong as
+                                                 // humanoid hands
+}
+
+void Joint::joint_current_relative_position(float* pos, float* speed) {
+    float rpos, rspeed;
+    rpos = joint_current_position;
+    rspeed = joint_current_speed;
+    joint_has_limits = true;
+    if (joint_has_limits) {
+        float pos_mid = 0.5 * (joint_limit1 + joint_limit2);
+        rpos = 2 * (rpos - pos_mid) / (joint_limit2 - joint_limit1);
+    }
+    if (joint_max_velocity > 0) {
+        rspeed /= joint_max_velocity;
+    } else {
+        if (joint_type==Household::Joint::ROTATIONAL_MOTOR)
+            rspeed *= 0.1; // normalize for 10 radian per second == 1
+                           // (6.3 radian/s is one rpm)
+        else
+            rspeed *= 0.5; // typical distance 1 meter, something fast travel it
+                           // in 0.5 seconds (speed is 2)
+    }
+    *pos = rpos;
+    *speed = rspeed;
+}
+
+void Joint::reset_current_position(float pos, float vel) {
+    shared_ptr<Robot> r = robot.lock();
+    shared_ptr<World> w = wref.lock();
+    if (!r || !w) return;
+    b3SharedMemoryCommandHandle cmd =
+            b3CreatePoseCommandInit(w->client, r->bullet_handle);
+    b3CreatePoseCommandSetJointPosition(w->client, cmd, bullet_joint_n, pos);
+    b3CreatePoseCommandSetJointVelocity(w->client, cmd, bullet_joint_n, vel);
+    b3SubmitClientCommandAndWaitStatus(w->client, cmd);
+}
+
+void Joint::activate() {}
+
 void World::bullet_init(float gravity, float timestep) {
     char* fake_argv[] = { 0 };
     //client = b3CreateInProcessPhysicsServerAndConnectMainThread(0, fake_argv);
@@ -113,7 +203,7 @@ shared_ptr<Robot> World::load_urdf(const std::string& fn,
 
 std::list<shared_ptr<Robot>> World::load_sdf_mjcf(const std::string& fn,
                                                   bool mjcf) {
-    //fprintf(stderr, "load_sdf_mjfc begin\n");
+    fprintf(stderr, "load_sdf_mjfc begin\n");
     std::list<shared_ptr<Robot>> ret;
     const int max_sdf_bodies = 512;
     int bodyIndicesOut[max_sdf_bodies];
@@ -124,8 +214,10 @@ std::list<shared_ptr<Robot>> World::load_sdf_mjcf(const std::string& fn,
         b3LoadMJCFCommandSetFlags(
                 command,
                 URDF_USE_SELF_COLLISION | URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS);
+        fprintf(stderr, "physics-bullet.cpp: LoadMJCFCommandInit begins\n");
         b3SharedMemoryStatusHandle status =
                 b3SubmitClientCommandAndWaitStatus(client, command);
+        fprintf(stderr, "physics-bullet.cpp: LoadMJCFCommandInit ends\n");
         if (b3GetStatusType(status) != CMD_MJCF_LOADING_COMPLETED) {
             fprintf(stderr, "'%s': cannot load MJCF.\n", fn.c_str());
             return ret;
@@ -145,7 +237,7 @@ std::list<shared_ptr<Robot>> World::load_sdf_mjcf(const std::string& fn,
     if (N > max_sdf_bodies) {
         fprintf(stderr, "'%s': too many bodies (%i).\n", fn.c_str(), N);
     }
-    //fprintf(stderr, "number of robots: %d\n", N);
+    fprintf(stderr, "number of robots: %d\n", N);
     for (int c=0; c<N; c++) {
         shared_ptr<Robot> robot(new Robot);
         robot->bullet_handle = bodyIndicesOut[c];
@@ -155,7 +247,7 @@ std::list<shared_ptr<Robot>> World::load_sdf_mjcf(const std::string& fn,
         bullet_handle_to_robot[robot->bullet_handle] = robot;
         ret.push_back(robot);
     }
-    //fprintf(stderr, "load_sdf_mjfc end\n");
+    fprintf(stderr, "load_sdf_mjfc end\n");
     return ret;
 }
 
@@ -247,11 +339,12 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
     robot->root_part.reset(new Thingy);
     robot->root_part->name = root.m_baseName;
     robot->original_urdf_name = original_fn + ":" + root.m_baseName;
+    int body_part_id = -1;
 
     int cnt = b3GetNumJoints(client, robot->bullet_handle);
     robot->joints.resize(cnt);
     robot->robot_parts.resize(cnt);
-    //fprintf(stderr, "root part name: %s, number of joints: %d\n", robot->root_part->name.c_str(), cnt);
+    fprintf(stderr, "root part name: %s, number of joints: %d\n", robot->root_part->name.c_str(), cnt);
     for (int c=0; c<cnt; c++) {
         struct b3JointInfo info;
         b3GetJointInfo(client, robot->bullet_handle, c, &info);
@@ -262,6 +355,9 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
         //ePlanarType = 3,
         //eFixedType = 4,
         //ePoint2PointType = 5,
+        fprintf(stderr, "joint %d: type: %d, name: (%s, %s), limit: (%f, %f), max_f: %f, max_v: %f\n",
+                c, info.m_jointType, info.m_jointName, info.m_linkName, info.m_jointLowerLimit, info.m_jointUpperLimit,
+                info.m_jointMaxForce, info.m_jointMaxVelocity);
         if (info.m_jointType==eRevoluteType || info.m_jointType==ePrismaticType) {
             shared_ptr<Joint>& j = robot->joints[c];
             j.reset(new Joint);
@@ -277,9 +373,6 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
             j->joint_limit2 = info.m_jointUpperLimit;
             j->joint_max_force = info.m_jointMaxForce;
             j->joint_max_velocity = info.m_jointMaxVelocity;
-            //fprintf(stderr, "joint %d: %s, (%f, %f), %f, %f\n",
-            //        c, j->joint_name.c_str(), j->joint_limit1, j->joint_limit2,
-            //        j->joint_max_force, j->joint_max_velocity);
         }
 
         shared_ptr<Thingy> part = robot->robot_parts[c];
@@ -288,8 +381,12 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
         part->bullet_link_n = c;
         part->name = info.m_linkName;
         robot->robot_parts[c] = part;
-        //fprintf(stderr, "part %d: %s %d %d\n", c, part->name.c_str(), part->bullet_handle, part->bullet_link_n);
+        if (part->name == "torso") {
+            body_part_id = c;
+        }
+        fprintf(stderr, "part %d: name: %s handle: %d link: %d\n", c, part->name.c_str(), part->bullet_handle, part->bullet_link_n);
     }
+    fprintf(stderr, "body part id: %d\n", body_part_id);
 }
 
 void World::klass_cache_clear() {
@@ -402,10 +499,6 @@ void World::thingy_add_to_drawlist(const shared_ptr<Thingy>& t) {
         t->in_drawlist = true;
         drawlist.push_back(t);
     }
-}
-
-void Thingy::remove_from_bullet() {
-    int breakpoint_here = 5;
 }
 
 void World::bullet_step(int skip_frames) {
@@ -556,96 +649,6 @@ void World::query_body_position(const shared_ptr<Robot>& robot) {
         j->joint_current_speed = q_dot[j->bullet_uindex];
     }
 }
-
-void Joint::set_motor_torque(float torque) {
-    shared_ptr<Robot> r = robot.lock();
-    shared_ptr<World> w = wref.lock();
-    if (!r || !w) return;
-    if (first_torque_call) {
-        set_servo_target(0, 0.1, 0.1, 0);
-        first_torque_call = false;
-    }
-    torque_need_repeat = true;
-    torque_repeat_val = torque;
-}
-
-void Joint::set_target_speed(float target_speed, float kd, float maxforce) {
-    shared_ptr<Robot> r = robot.lock();
-    shared_ptr<World> w = wref.lock();
-    if (!r || !w) return;
-    b3SharedMemoryCommandHandle cmd =
-            b3JointControlCommandInit2(w->client,
-                                       r->bullet_handle,
-                                       CONTROL_MODE_VELOCITY);
-    b3JointControlSetDesiredVelocity(cmd, bullet_uindex, target_speed);
-    b3JointControlSetKd(cmd, bullet_uindex, kd);
-    b3JointControlSetMaximumForce(cmd, bullet_uindex, maxforce);
-    b3SubmitClientCommandAndWaitStatus(w->client, cmd);
-    first_torque_call = true;
-    torque_need_repeat = false;
-}
-
-void Joint::set_servo_target(
-        float target_pos, float kp, float kd, float maxforce) {
-    shared_ptr<Robot> r = robot.lock();
-    shared_ptr<World> w = wref.lock();
-    if (!r || !w) return;
-    b3SharedMemoryCommandHandle cmd =
-            b3JointControlCommandInit2(w->client,
-                                       r->bullet_handle,
-                                       CONTROL_MODE_POSITION_VELOCITY_PD);
-    b3JointControlSetDesiredPosition(cmd, bullet_qindex, target_pos);
-    b3JointControlSetKp(cmd, bullet_uindex, kp);
-    b3JointControlSetKd(cmd, bullet_uindex, kd);
-    b3JointControlSetMaximumForce(cmd, bullet_uindex, maxforce);
-    b3SubmitClientCommandAndWaitStatus(w->client, cmd);
-    first_torque_call = true;
-    torque_need_repeat = false;
-}
-
-void Joint::set_relative_servo_target(float target_pos, float kp, float kd) {
-    float pos_mid = 0.5*(joint_limit1 + joint_limit2);
-    set_servo_target( pos_mid + 0.5*target_pos*(joint_limit2 - joint_limit1),
-        kp, kd,
-        joint_max_force ? joint_max_force : 40); // 40 is about as strong as
-                                                 // humanoid hands
-}
-
-void Joint::joint_current_relative_position(float* pos, float* speed) {
-    float rpos, rspeed;
-    rpos = joint_current_position;
-    rspeed = joint_current_speed;
-    joint_has_limits = true;
-    if (joint_has_limits) {
-        float pos_mid = 0.5 * (joint_limit1 + joint_limit2);
-        rpos = 2 * (rpos - pos_mid) / (joint_limit2 - joint_limit1);
-    }
-    if (joint_max_velocity > 0) {
-        rspeed /= joint_max_velocity;
-    } else {
-        if (joint_type==Household::Joint::ROTATIONAL_MOTOR)
-            rspeed *= 0.1; // normalize for 10 radian per second == 1
-                           // (6.3 radian/s is one rpm)
-        else
-            rspeed *= 0.5; // typical distance 1 meter, something fast travel it
-                           // in 0.5 seconds (speed is 2)
-    }
-    *pos = rpos;
-    *speed = rspeed;
-}
-
-void Joint::reset_current_position(float pos, float vel) {
-    shared_ptr<Robot> r = robot.lock();
-    shared_ptr<World> w = wref.lock();
-    if (!r || !w) return;
-    b3SharedMemoryCommandHandle cmd =
-            b3CreatePoseCommandInit(w->client, r->bullet_handle);
-    b3CreatePoseCommandSetJointPosition(w->client, cmd, bullet_joint_n, pos);
-    b3CreatePoseCommandSetJointVelocity(w->client, cmd, bullet_joint_n, vel);
-    b3SubmitClientCommandAndWaitStatus(w->client, cmd);
-}
-
-void Joint::activate() {}
 
 void World::robot_move(const shared_ptr<Robot>& robot,
                        const btTransform& tr,

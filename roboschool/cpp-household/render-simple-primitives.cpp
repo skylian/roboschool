@@ -1,7 +1,7 @@
 #include "render-simple.h"
 #include <assimp/scene.h>           // for aiVector3D structure
 
-using smart_pointer::shared_ptr;
+using std::shared_ptr;
 
 namespace SimpleRender {
 

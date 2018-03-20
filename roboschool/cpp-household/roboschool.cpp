@@ -319,8 +319,8 @@ public:
         return Thingy(make_shared<ThingyImpl>(rref->root_part, wref));
     }
 
-    Pose pose() const {
-        return PoseImpl::from_bt_transform(rref->root_part->bullet_position);
+    Pose pose(const int part_id = -1) const {
+        return PoseImpl::from_bt_transform(rref->pose(part_id));
     }
 
     void set_pose(const Pose& p) {
@@ -374,14 +374,35 @@ public:
 
     std::list<shared_ptr<ThingyImpl>> contact_list();
 
-    void joint_control(const size_t joint_id, const double target_pos) {
+    // joint controls
+    void joint_set_target_speed(
+            const size_t joint_id, const float target_speed) {
+        assert(joint_id >= 0 && joint_id < rref->joints.size());
+        rref->joints[joint_id]->set_target_speed(target_speed, 1, 1);
+    }
+
+    void joint_set_servo_target(
+            const size_t joint_id, const double target_pos) {
+        assert(joint_id >= 0 && joint_id < rref->joints.size());
+        rref->joints[joint_id]->set_servo_target(target_pos, 1, 1, 40);
+    }
+
+    void joint_set_relative_servo_target(
+            const size_t joint_id, const double target_pos) {
         assert(joint_id >= 0 && joint_id < rref->joints.size());
         rref->joints[joint_id]->set_relative_servo_target(target_pos, 1, 1);
     }
 
-    void current_relative_position(const size_t joint_id, float& pos, float& vel) {
+    void joint_current_relative_position(
+            const size_t joint_id, float& pos, float& vel) {
         assert(joint_id >= 0 && joint_id < rref->joints.size());
-        return rref->joints[joint_id]->joint_current_relative_position(&pos, &vel);
+        rref->joints[joint_id]->joint_current_relative_position(&pos, &vel);
+    }
+
+    void joint_reset_current_position(
+            const size_t joint_id, const float pos, const float vel) {
+        assert(joint_id >= 0 && joint_id < rref->joints.size());
+        rref->joints[joint_id]->reset_current_position(pos, vel);
     }
 
 private:
@@ -475,12 +496,30 @@ std::list<Thingy> Object::contact_list() {
     return ret;
 }
 
-void Object::joint_control(const size_t joint_id, const double target_pos) {
-    impl_->joint_control(joint_id, target_pos);
+// joint controls
+void Object::joint_set_target_speed(
+        const size_t joint_id, const float target_speed) {
+    impl_->joint_set_target_speed(joint_id, target_speed);
 }
 
-void Object::current_relative_position(const size_t joint_id, float& pos, float& vel) {
-    impl_->current_relative_position(joint_id, pos, vel);
+void Object::joint_set_servo_target(
+        const size_t joint_id, const double target_pos) {
+    impl_->joint_set_servo_target(joint_id, target_pos);
+}
+
+void Object::joint_set_relative_servo_target(
+        const size_t joint_id, const double target_pos) {
+    impl_->joint_set_relative_servo_target(joint_id, target_pos);
+}
+
+void Object::joint_current_relative_position(
+        const size_t joint_id, float& pos, float& vel) {
+    impl_->joint_current_relative_position(joint_id, pos, vel);
+}
+
+void Object::joint_reset_current_position(
+        const size_t joint_id, const float pos, const float vel) {
+    impl_->joint_reset_current_position(joint_id, pos, vel);
 }
 
 /*********************************** Camera ***********************************/

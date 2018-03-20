@@ -50,7 +50,9 @@ struct Thingy {
     }
 
     ~Thingy() { remove_from_bullet(); }
-    void remove_from_bullet();
+
+    void remove_from_bullet() { int breakpoint_here = 5; }
+
     bool is_sleeping() { return false; }
 
     void set_multiply_color(const std::string& tex,
@@ -141,11 +143,22 @@ struct Camera {
 
 struct Robot {
     std::shared_ptr<Thingy> root_part;
+    int body_part_id;
     int bullet_handle;
     std::string original_urdf_name;
     std::vector<std::shared_ptr<Thingy>> robot_parts;
     std::vector<std::shared_ptr<Joint>> joints;
     std::vector<std::shared_ptr<Camera>> cameras;
+
+    btTransform pose(const int part_id) {
+        if (part_id == -1) {
+            if (body_part_id == -1) return root_part->bullet_position;
+            else return robot_parts[body_part_id]->bullet_position;
+        } else {
+            assert(part_id >=0 && part_id < (int)robot_parts.size());
+            return robot_parts[part_id]->bullet_position;
+        }
+    }
     //void replace_texture(
     //        const std::string& material_name, const std::string& new_jpeg_png);
 };

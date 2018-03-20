@@ -180,6 +180,21 @@ public:
 
     void set_pose_and_speed(const Pose& p, double vx, double vy, double vz);
 
+    void joint_set_target_speed(
+            const size_t joint_id, const float target_speed);
+
+    void joint_set_servo_target(
+            const size_t joint_id, const double target_pos);
+
+    void joint_set_relative_servo_target(
+            const size_t joint_id, const double target_pos);
+
+    void joint_current_relative_position(
+            const size_t joint_id, float& pos, float& vel);
+
+    void joint_reset_current_position(
+            const size_t joint_id, const float pos, const float vel);
+
     void query_position();
 
     int bullet_handle() const;
