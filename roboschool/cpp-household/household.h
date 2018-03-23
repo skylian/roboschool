@@ -97,12 +97,12 @@ struct Joint {
     bool torque_need_repeat = false;
     float torque_repeat_val = 0;
 
-    void joint_current_relative_position(float* pos, float* speed);
+    void current_relative_position(float* pos, float* speed);
     void reset_current_position(float pos, float vel);
 
     void set_motor_torque(float torque);
 
-    void set_target_speed(float target_speed, float kd, float maxforce);
+    void set_target_speed(float target_speed, float maxforce);
     void set_relative_target_speed(float target_speed, float kp);
 
     void set_servo_target(float target_pos, float kp, float kd, float maxforce);
@@ -150,7 +150,8 @@ struct Robot {
     std::vector<std::shared_ptr<Joint>> joints;
     std::vector<std::shared_ptr<Camera>> cameras;
 
-    btTransform pose(const int part_id) {
+    btTransform part_pose(const int part_id) {
+        //fprintf(stderr, "%s: %d %d %d\n", original_urdf_name.c_str(), part_id, body_part_id, int(robot_parts.size()));
         if (part_id == -1) {
             if (body_part_id == -1) return root_part->bullet_position;
             else return robot_parts[body_part_id]->bullet_position;

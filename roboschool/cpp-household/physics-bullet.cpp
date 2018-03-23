@@ -21,16 +21,16 @@ void Joint::set_motor_torque(float torque) {
     torque_repeat_val = torque;
 }
 
-void Joint::set_target_speed(float target_speed, float kd, float maxforce) {
+void Joint::set_target_speed(float target_speed, float maxforce) {
     shared_ptr<Robot> r = robot.lock();
     shared_ptr<World> w = wref.lock();
     if (!r || !w) return;
+
     b3SharedMemoryCommandHandle cmd =
             b3JointControlCommandInit2(w->client,
                                        r->bullet_handle,
                                        CONTROL_MODE_VELOCITY);
     b3JointControlSetDesiredVelocity(cmd, bullet_uindex, target_speed);
-    b3JointControlSetKd(cmd, bullet_uindex, kd);
     b3JointControlSetMaximumForce(cmd, bullet_uindex, maxforce);
     b3SubmitClientCommandAndWaitStatus(w->client, cmd);
     first_torque_call = true;
@@ -63,7 +63,7 @@ void Joint::set_relative_servo_target(float target_pos, float kp, float kd) {
                                                  // humanoid hands
 }
 
-void Joint::joint_current_relative_position(float* pos, float* speed) {
+void Joint::current_relative_position(float* pos, float* speed) {
     float rpos, rspeed;
     rpos = joint_current_position;
     rspeed = joint_current_speed;
@@ -339,7 +339,7 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
     robot->root_part.reset(new Thingy);
     robot->root_part->name = root.m_baseName;
     robot->original_urdf_name = original_fn + ":" + root.m_baseName;
-    int body_part_id = -1;
+    robot->body_part_id = -1;
 
     int cnt = b3GetNumJoints(client, robot->bullet_handle);
     robot->joints.resize(cnt);
@@ -382,11 +382,11 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
         part->name = info.m_linkName;
         robot->robot_parts[c] = part;
         if (part->name == "torso") {
-            body_part_id = c;
+            robot->body_part_id = c;
         }
         fprintf(stderr, "part %d: name: %s handle: %d link: %d\n", c, part->name.c_str(), part->bullet_handle, part->bullet_link_n);
     }
-    fprintf(stderr, "body part id: %d\n", body_part_id);
+    fprintf(stderr, "body part id: %d\n", robot->body_part_id);
 }
 
 void World::klass_cache_clear() {

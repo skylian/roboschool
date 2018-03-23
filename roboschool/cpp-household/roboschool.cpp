@@ -252,8 +252,8 @@ class Joint {
         jref->set_motor_torque(q);
     }
 
-    void set_target_speed(double target_speed, double kd, double maxforce) {
-        jref->set_target_speed(target_speed, kd, maxforce);
+    void set_target_speed(double target_speed, double maxforce) {
+        jref->set_target_speed(target_speed, maxforce);
     }
 
     void set_servo_target(double target_pos, double kp, double kd, double maxforce) {
@@ -268,10 +268,11 @@ class Joint {
         return std::make_tuple(jref->joint_current_position,
                                jref->joint_current_speed);
     }
+    
     std::tuple<double,double> current_relative_position() {
         float pos;
         float speed;
-        jref->joint_current_relative_position(&pos, &speed);
+        jref->current_relative_position(&pos, &speed);
         return std::make_tuple(pos, speed);
     }
 
@@ -319,8 +320,8 @@ public:
         return Thingy(make_shared<ThingyImpl>(rref->root_part, wref));
     }
 
-    Pose pose(const int part_id = -1) const {
-        return PoseImpl::from_bt_transform(rref->pose(part_id));
+    Pose part_pose(const int part_id) const {
+        return PoseImpl::from_bt_transform(rref->part_pose(part_id));
     }
 
     void set_pose(const Pose& p) {
@@ -378,7 +379,7 @@ public:
     void joint_set_target_speed(
             const size_t joint_id, const float target_speed) {
         assert(joint_id >= 0 && joint_id < rref->joints.size());
-        rref->joints[joint_id]->set_target_speed(target_speed, 1, 1);
+        rref->joints[joint_id]->set_target_speed(target_speed, 400);
     }
 
     void joint_set_servo_target(
@@ -393,10 +394,16 @@ public:
         rref->joints[joint_id]->set_relative_servo_target(target_pos, 1, 1);
     }
 
+    void joint_current_position(const size_t joint_id, float& pos, float& vel) {
+        assert(joint_id >= 0 && joint_id < rref->joints.size());
+        pos = rref->joints[joint_id]->joint_current_position;
+        vel = rref->joints[joint_id]->joint_current_speed;
+    }
+
     void joint_current_relative_position(
             const size_t joint_id, float& pos, float& vel) {
         assert(joint_id >= 0 && joint_id < rref->joints.size());
-        rref->joints[joint_id]->joint_current_relative_position(&pos, &vel);
+        rref->joints[joint_id]->current_relative_position(&pos, &vel);
     }
 
     void joint_reset_current_position(
@@ -447,7 +454,11 @@ Thingy Object::root_part() {
 }
 
 Pose Object::pose() const {
-    return impl_->pose();
+    return this->part_pose(-1);
+}
+
+Pose Object::part_pose(const int part_id = -1) const {
+    return impl_->part_pose(part_id);
 }
 
 void Object::set_pose(const Pose& p) {
@@ -510,6 +521,11 @@ void Object::joint_set_servo_target(
 void Object::joint_set_relative_servo_target(
         const size_t joint_id, const double target_pos) {
     impl_->joint_set_relative_servo_target(joint_id, target_pos);
+}
+
+void Object::joint_current_position(
+        const size_t joint_id, float& pos, float& vel) {
+    impl_->joint_current_position(joint_id, pos, vel);
 }
 
 void Object::joint_current_relative_position(

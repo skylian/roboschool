@@ -166,6 +166,8 @@ public:
 
     Pose pose() const;
 
+    Pose part_pose(const int part_id) const;
+
     void set_pose(const Pose& p);
 
     void speed(double& vx, double& vy, double& vz) const;
@@ -189,6 +191,8 @@ public:
     void joint_set_relative_servo_target(
             const size_t joint_id, const double target_pos);
 
+    void joint_current_position(const size_t joint_id, float& pos, float& vel);
+    
     void joint_current_relative_position(
             const size_t joint_id, float& pos, float& vel);
 
@@ -202,8 +206,6 @@ public:
     std::list<Thingy> contact_list();
 
     void joint_control(const size_t joint_id, const double target_pos);
-
-    void current_relative_position(const size_t joint_id, float& pos, float& vel);
 
 private:
     std::shared_ptr<ObjectImpl> impl_;
