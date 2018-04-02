@@ -705,9 +705,9 @@ public:
                 wref));
     }
 
-    std::vector<Object> load_mjcf(const std::string& fn) {
+    std::vector<Object> load_sdf_mjcf(const std::string& fn, bool mjcf) {
         std::list<shared_ptr<Household::Robot>> rlist =
-                wref->load_sdf_mjcf(fn, true);
+                wref->load_sdf_mjcf(fn, mjcf);
         std::vector<Object> ret;
         for (auto r: rlist)
             ret.emplace_back(make_shared<ObjectImpl>(r, wref));
@@ -767,7 +767,8 @@ void WorldImpl::set_glsl_path(const std::string& dir) {
 }
 
 World::World(int height, int width, double gravity, double timestep) :
-        impl_(make_shared<WorldImpl>(height, width, gravity, timestep)) {}
+        impl_(make_shared<WorldImpl>(height, width, gravity, timestep)) {
+}
 
 void World::remove_object(const Object& obj) {
     impl_->remove_object(obj);
@@ -797,8 +798,8 @@ Object World::load_urdf(const std::string& fn,
             fn, pose, scale, fixed_base, self_collision, use_multibody);
 }
 
-std::vector<Object> World::load_mjcf(const std::string& fn) {
-    return impl_->load_mjcf(fn);
+std::vector<Object> World::load_sdf_mjcf(const std::string& fn, bool mjcf) {
+    return impl_->load_sdf_mjcf(fn, mjcf);
 }
 
 double World::ts() {

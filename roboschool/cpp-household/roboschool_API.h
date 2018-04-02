@@ -268,7 +268,7 @@ public:
                      bool self_collision,
                      bool use_multibody = false);
 
-    std::vector<Object> load_mjcf(const std::string& fn);
+    std::vector<Object> load_sdf_mjcf(const std::string& fn, bool mjcf);
 
     double ts();
 

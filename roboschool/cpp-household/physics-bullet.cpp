@@ -163,7 +163,8 @@ shared_ptr<Robot> World::load_urdf(const std::string& fn,
                                    bool fixed_base,
                                    bool self_collision,
                                    bool use_multibody) {
-    //fprintf(stderr, "load_urdf begin\n");
+    fprintf(stderr, "load_urdf %s begin\n", fn.c_str());
+
     shared_ptr<Robot> robot(new Robot);
     robot->original_urdf_name = fn;
     int statusType;
@@ -197,13 +198,15 @@ shared_ptr<Robot> World::load_urdf(const std::string& fn,
     robotlist.push_back(robot);
     bullet_handle_to_robot[robot->bullet_handle] = robot;
     robot->root_part->bullet_handle = robot->bullet_handle;
-    //fprintf(stderr, "load_urdf end\n");
+
+    fprintf(stderr, "load_urdf %s end\n", fn.c_str());
+
     return robot;
 }
 
 std::list<shared_ptr<Robot>> World::load_sdf_mjcf(const std::string& fn,
                                                   bool mjcf) {
-    fprintf(stderr, "load_sdf_mjfc begin\n");
+    fprintf(stderr, "load_sdf_mjfc %s begin\n", fn.c_str());
     std::list<shared_ptr<Robot>> ret;
     const int max_sdf_bodies = 512;
     int bodyIndicesOut[max_sdf_bodies];
@@ -247,7 +250,7 @@ std::list<shared_ptr<Robot>> World::load_sdf_mjcf(const std::string& fn,
         bullet_handle_to_robot[robot->bullet_handle] = robot;
         ret.push_back(robot);
     }
-    fprintf(stderr, "load_sdf_mjfc end\n");
+    fprintf(stderr, "load_sdf_mjfc %s end\n", fn.c_str());
     return ret;
 }
 
@@ -381,7 +384,7 @@ void World::load_robot_joints(const shared_ptr<Robot>& robot,
         part->bullet_link_n = c;
         part->name = info.m_linkName;
         robot->robot_parts[c] = part;
-        if (part->name == "torso") {
+        if (part->name == "torso" || part->name == "base_link") {
             robot->body_part_id = c;
         }
         fprintf(stderr, "part %d: name: %s handle: %d link: %d\n", c, part->name.c_str(), part->bullet_handle, part->bullet_link_n);

@@ -33,7 +33,7 @@ protected:
 };
 
 inline GLContext* createHeadlessContext(int h, int w, int device=0) {
-  return new EGLContext{h, w, device};
+    return new EGLContext{h, w, device};
 };
 
 } // namespace SimpleRender
