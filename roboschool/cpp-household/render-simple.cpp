@@ -63,8 +63,7 @@ Context::Context(const shared_ptr<Household::World>& world) :
 }
 
 Context::~Context() {
-	//glcx->makeCurrent(surf);
-	// destructors here
+    delete glcx;
 }
 
 int Context::cached_bind_texture(const std::string& image_fn) {

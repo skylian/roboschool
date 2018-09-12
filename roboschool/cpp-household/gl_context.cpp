@@ -128,10 +128,10 @@ EGLContext::EGLContext(int h, int w, int device): GLContext{h, w} {
     checkError(succ);
 
     // 5. Create a context and make it current
-    ::EGLContext eglCtx = eglCreateContext(
+    ::EGLContext eglCtx_ = eglCreateContext(
             eglDpy_, eglCfg, (::EGLContext)0, NULL);
     checkError(succ);
-    succ = eglMakeCurrent(eglDpy_, eglSurf, eglSurf, eglCtx);
+    succ = eglMakeCurrent(eglDpy_, eglSurf, eglSurf, eglCtx_);
     if (!succ) {
         fprintf(stderr, "Failed to make EGL context current!");
         fflush(stderr);
@@ -144,6 +144,7 @@ EGLContext::EGLContext(int h, int w, int device): GLContext{h, w} {
 
 EGLContext::~EGLContext() {
     // 6. Terminate EGL when finished
+    eglDestroyContext(eglDpy_, eglCtx_);
     eglTerminate(eglDpy_);
 }
 

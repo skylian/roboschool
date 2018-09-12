@@ -30,6 +30,7 @@ public:
 
 protected:
     EGLDisplay eglDpy_;
+    ::EGLContext eglCtx_;
 };
 
 inline GLContext* createHeadlessContext(int h, int w, int device=0) {

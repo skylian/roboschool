@@ -609,9 +609,7 @@ public:
         SimpleRender::opengl_init(wref, img_height, img_width);
     }
 
-    ~WorldImpl() {
-        printf("WorldImpl destructor\n");
-    }
+    ~WorldImpl() {}
 
     void remove_object(const Object& o);
 
